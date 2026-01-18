@@ -21,7 +21,9 @@ void initBmeLora() {
    // Change sync word (0xF3) to match the receiver
   // The sync word assures you don't get LoRa messages from other LoRa transceivers
   // ranges from 0-0xFF
+#if defined(ESP32_S3) && (ESP32_S3 == 0)
   LoRa.setTxPower(20);   // SX1278: max ~17 dBm
+#endif
   LoRa.setSpreadingFactor(9);
   LoRa.setSignalBandwidth(250E3);
   LoRa.setCodingRate4(6);
@@ -33,6 +35,7 @@ void initBmeLora() {
   DEBUG("LoRa Initializing OK!");
 }
 
+#if defined(ESP32_S3) && (ESP32_S3 == 0)
 bool setLoraPacket(lora_data_packet_t* data) {
   data->deviceId = DEVICE_ID;
   bool hasData = getSpO2AndHeartRate(&(data->spO2), &(data->heartRate));
@@ -42,6 +45,7 @@ bool setLoraPacket(lora_data_packet_t* data) {
   data->CRC = 6;
   return hasData;
 }
+#endif
 
 bool getLoraPacket(lora_data_packet_t* data) {
   uint8_t buffer[50];
@@ -62,6 +66,7 @@ bool getLoraPacket(lora_data_packet_t* data) {
   return 0;
 }
 
+#if defined(ESP32_S3) && (ESP32_S3 == 0)
 void setAndSendLoraPacket() {
   lora_data_packet_t data;
   char dataSend[LORA_DATA_PACKET_SIZE];
@@ -74,3 +79,4 @@ void setAndSendLoraPacket() {
     LoRa.endPacket();
   }
 }
+#endif

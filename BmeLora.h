@@ -44,10 +44,14 @@ typedef struct __attribute__((packed)) {
 
 void initBmeLora(); 
 
+#if defined(ESP32_S3) && (ESP32_S3 == 0)
 bool setLoraPacket(lora_data_packet_t* data);
+#endif
 
 bool getLoraPacket(lora_data_packet_t* data);
 
+#if defined(ESP32_S3) && (ESP32_S3 == 0)
 void setAndSendLoraPacket();
+#endif
 
 #endif

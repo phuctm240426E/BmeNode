@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "BmeLcd.h"
 
+#if defined(ESP32) && (ESP32 == 0)
 MAX30105 particleSensor;
 
 uint32_t irBuffer[100]; 
@@ -13,10 +14,13 @@ int8_t  validSpO2, validHR;
 int dispBPM = 0;
 int dispSpO2 = 0;
 bool tick = false;
+#endif
 
 void initSensor() {
+#if defined(ESP32) && (ESP32 == 0)
   if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) while (1);
   particleSensor.setup(60, 1, 2, 100, 411, 4096); // 100Hz
+#endif
 }
 
 blood_pressure_t getBloodPressure() {
@@ -39,7 +43,7 @@ bool getSpO2AndHeartRate(uint8_t* spO2, uint8_t* hr) {
   if (irValue < 45000) {
     display.clearDisplay();
     display.setTextSize(1);
-    display.setCursor(0, 0); display.print("TRANG THAI: SAN SANG");
+    display.setCursor(0, 0); display.print("TRANG THAI: SAN SANG "); display.print(DEVICE_ID);
     display.setCursor(0, 35); display.print("Hay dat ngon tay vao..."); // Chữ nhỏ cỡ 1
     display.display();
     dispBPM = 0; dispSpO2 = 0;

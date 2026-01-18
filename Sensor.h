@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include "BmeBoard.h"
+
+#if defined(ESP32) && (ESP32 == 0)
 #include "MAX30105.h"
 #include "spo2_algorithm.h"
 
@@ -16,6 +18,7 @@ extern int8_t  validSpO2, validHR;
 extern int dispBPM;
 extern int dispSpO2;
 extern bool tick;
+#endif
 
 typedef struct __attribute__((packed)){
     uint8_t systolic;   // mmHg

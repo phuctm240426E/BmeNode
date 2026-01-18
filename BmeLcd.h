@@ -18,7 +18,9 @@
   #define I2C_SCL 7
 #endif
 
+#if defined(ESP32) && (ESP32 == 0)
 extern Adafruit_SSD1306 display;
+#endif
 
 void initOLED();
 
