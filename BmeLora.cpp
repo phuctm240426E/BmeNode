@@ -1,12 +1,15 @@
 #include "BmeLora.h"
 #include "Debug.h"
 
+int cnt = 0;
+uint8_t id = 1;
+
 void initBmeLora() {
-  DEBUG("LoRa Receiver");
+  DEBUG("Init Lora Module");
 
 #if defined(ESP32) && (ESP32 == 0)
   SPI.begin(L_SCK, L_MISO, L_MOSI, SS);
-#endif
+#endif        // ESP32 == 0
 
   LoRa.setPins(SS, RST, DIO0);
   
@@ -21,9 +24,9 @@ void initBmeLora() {
    // Change sync word (0xF3) to match the receiver
   // The sync word assures you don't get LoRa messages from other LoRa transceivers
   // ranges from 0-0xFF
-#if defined(ESP32_S3) && (ESP32_S3 == 0)
+#if defined(LORA_NODE) && (LORA_NODE == 1)
   LoRa.setTxPower(20);   // SX1278: max ~17 dBm
-#endif
+#endif        // LORA_NODE == 1
   LoRa.setSpreadingFactor(9);
   LoRa.setSignalBandwidth(250E3);
   LoRa.setCodingRate4(6);
@@ -35,20 +38,32 @@ void initBmeLora() {
   DEBUG("LoRa Initializing OK!");
 }
 
-#if defined(ESP32_S3) && (ESP32_S3 == 0)
+#if defined(LORA_NODE) && (LORA_NODE == 1)
 bool setLoraPacket(lora_data_packet_t* data) {
   data->deviceId = DEVICE_ID;
   bool hasData = getSpO2AndHeartRate(&(data->spO2), &(data->heartRate));
-  //data->spO2 = getSpO2();
-  //data->heartRate = getHeartRate();
-  data->bloodPressure = getBloodPressure();
-  data->CRC = 6;
   return hasData;
 }
-#endif
+#endif        // LORA_NODE == 1
 
 bool getLoraPacket(lora_data_packet_t* data) {
-  uint8_t buffer[50];
+#if defined(TEST_MODE) && (TEST_MODE == 1)
+  if(id == 1) {
+    id = 2;
+  }
+  else{
+   id = 1; 
+  }
+  data->deviceId = id;
+  data->spO2 = cnt;
+  cnt++;
+  //data->spO2 = random(85, 100);
+  data->heartRate = random(81, 90);
+  return true;
+#endif        // TEST_MODE == 1
+
+#if defined(TEST_MODE) && (TEST_MODE == 0)
+  uint8_t buffer[10];
   uint8_t cnt = 0;
   int packetSize = LoRa.parsePacket();
 
@@ -64,19 +79,20 @@ bool getLoraPacket(lora_data_packet_t* data) {
   }
 
   return 0;
+#endif        // TEST_MODE == 0
 }
 
-#if defined(ESP32_S3) && (ESP32_S3 == 0)
+#if defined(LORA_NODE) && (LORA_NODE == 1)
 void setAndSendLoraPacket() {
   lora_data_packet_t data;
-  char dataSend[LORA_DATA_PACKET_SIZE];
+  uint8_t dataSend[LORA_DATA_PACKET_SIZE];
   
   if(setLoraPacket(&data)) {
     memcpy(dataSend, &data, LORA_DATA_PACKET_SIZE);
     
     LoRa.beginPacket();
-    LoRa.print(dataSend);
+    LoRa.write(dataSend, LORA_DATA_PACKET_SIZE);
     LoRa.endPacket();
   }
 }
-#endif
+#endif        // LORA_NODE == 1
