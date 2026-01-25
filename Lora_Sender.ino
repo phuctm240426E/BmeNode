@@ -15,5 +15,7 @@ void loop() {
 #if defined(ESP32) && (ESP32 == 1)
   delay(3000);
 #endif
-  setAndSendLoraPacket();
+  if(setAndSendLoraPacket()) {
+    getAckPacket();
+  }
 }

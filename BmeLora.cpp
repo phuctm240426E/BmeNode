@@ -38,10 +38,44 @@ void initBmeLora() {
   DEBUG("LoRa Initializing OK!");
 }
 
+bool scanChannel() {
+  return true;
+}
+
+bool waitForFreeChannel()
+{
+    for (int i = 0; i < MAX_LBT_RETRY; i++) {
+        if (scanChannel() == true) {
+            return true;
+        }
+
+        uint32_t waitMs = random(BACKOFF_MIN_MS, BACKOFF_MAX_MS);
+        delay(waitMs);
+    }
+    return false; // give up this cycle
+}
+
+uint16_t calculateCRC(const uint8_t *data, uint16_t len)
+{
+    uint16_t crc = 0xFFFF;
+
+    for (uint16_t i = 0; i < len; i++) {
+        crc ^= (uint16_t)data[i] << 8;
+        for (uint8_t j = 0; j < 8; j++) {
+            if (crc & 0x8000)
+                crc = (crc << 1) ^ 0x1021;
+            else
+                crc <<= 1;
+        }
+    }
+    return crc;
+}
+
 #if defined(LORA_NODE) && (LORA_NODE == 1)
 bool setLoraPacket(lora_data_packet_t* data) {
   data->deviceId = DEVICE_ID;
   bool hasData = getSpO2AndHeartRate(&(data->spO2), &(data->heartRate));
+  data->crc = calculateCRC((uint8_t*)data, 4);
   return hasData;
 }
 #endif        // LORA_NODE == 1
@@ -59,6 +93,7 @@ bool getLoraPacket(lora_data_packet_t* data) {
   cnt++;
   //data->spO2 = random(85, 100);
   data->heartRate = random(81, 90);
+  data->crc = data->crc = calculateCRC((uint8_t*)data, 4);
   return true;
 #endif        // TEST_MODE == 1
 
@@ -80,19 +115,56 @@ bool getLoraPacket(lora_data_packet_t* data) {
 
   return 0;
 #endif        // TEST_MODE == 0
-}
+} 
 
 #if defined(LORA_NODE) && (LORA_NODE == 1)
-void setAndSendLoraPacket() {
+bool setAndSendLoraPacket() {
   lora_data_packet_t data;
   uint8_t dataSend[LORA_DATA_PACKET_SIZE];
   
   if(setLoraPacket(&data)) {
     memcpy(dataSend, &data, LORA_DATA_PACKET_SIZE);
-    
+    if (!waitForFreeChannel())
+      return false;
     LoRa.beginPacket();
     LoRa.write(dataSend, LORA_DATA_PACKET_SIZE);
     LoRa.endPacket();
+    return true;
   }
+  return false;
+}
+
+bool getAckPacket() {
+  long st = millis();
+  while(millis() - st < ACK_TIMEOUT_MS) {
+    int len = LoRa.parsePacket();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.setTextSize(2);
+    //display.println("SUCCESS");
+    display.print(len);
+    display.display();
+    delay(2000);
+    if (len == 1) {
+        uint8_t ackId = LoRa.read();
+        if (ackId == DEVICE_ID) {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.setTextSize(2);
+            //display.println("SUCCESS");
+            display.print(len);
+            display.display();
+            delay(2000);
+            return true;
+        } 
+    }
+  }
+  //display.clearDisplay();
+  display.setCursor(0, 0);
+  display.setTextSize(2);
+  //display.println("FAIL");
+  display.display();
+  delay(2000);
+  return false;
 }
 #endif        // LORA_NODE == 1
